@@ -64,7 +64,7 @@ export default function SiteHeader() {
           />
         </Link>
 
-        <nav className="hidden items-center gap-8 lg:flex" aria-label="Main">
+        <nav className="hidden items-center gap-6 xl:flex" aria-label="Main">
           {nav.map((item) => {
             const active =
               item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
@@ -91,15 +91,7 @@ export default function SiteHeader() {
           })}
         </nav>
 
-        <div className="hidden items-center gap-5 lg:flex">
-          {site.phone && (
-            <a
-              href={`tel:${site.phone.replace(/[^0-9+]/g, '')}`}
-              className="font-display text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-[#157FFB] opacity-80 transition-opacity hover:opacity-100"
-            >
-              {site.phone}
-            </a>
-          )}
+        <div className="hidden xl:block">
           <Link href="/start" className="btn-primary !px-6 !py-3">
             Start a project
           </Link>
@@ -117,7 +109,7 @@ export default function SiteHeader() {
           // Background stays solid ink for guaranteed contrast on every
           // page/state; the bars themselves are the logo's sampled blue
           // (#157FFB), not the site's paler "cedar" accent.
-          className="flex h-11 w-11 items-center justify-center rounded-sm bg-ink transition-colors hover:bg-stone lg:hidden"
+          className="flex h-11 w-11 items-center justify-center rounded-sm bg-ink transition-colors hover:bg-stone xl:hidden"
           aria-expanded={open}
           aria-controls="mobile-menu"
           aria-label={open ? 'Close menu' : 'Open menu'}
@@ -145,7 +137,7 @@ export default function SiteHeader() {
       {open && (
         <div
           id="mobile-menu"
-          className="absolute inset-x-0 top-full z-[70] max-h-[calc(100svh-4.5rem)] overflow-y-auto border-t border-ink/10 bg-bone shadow-[0_20px_40px_rgba(20,17,15,0.18)] lg:hidden"
+          className="absolute inset-x-0 top-full z-[70] max-h-[calc(100svh-4.5rem)] overflow-y-auto border-t border-ink/10 bg-bone shadow-[0_20px_40px_rgba(20,17,15,0.18)] xl:hidden"
         >
           <nav className="shell flex flex-col py-3" aria-label="Mobile">
             {nav.map((item) => {
