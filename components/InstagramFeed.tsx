@@ -1,54 +1,45 @@
-'use client';
-
 import Script from 'next/script';
-import { useEffect } from 'react';
 import { site } from '@/data/site';
 
+/**
+ * Live Instagram feed via Behold (behold.so) — connected directly to
+ * @henry_designbuild's account there, so this updates itself automatically
+ * whenever a new post goes up. No manual link-updating needed, unlike the
+ * old version of this component (individual oEmbed posts, updated by hand).
+ *
+ * The <behold-widget> element and its loader script are exactly what
+ * Behold's dashboard gives you for this feed — untouched, so it keeps
+ * working if Behold changes their loader internals. Swap the feed-id below
+ * only if the Behold feed itself is ever recreated.
+ */
+const FEED_ID = '97dxIIOhT6ArxwaFH7Qd';
+
 declare global {
-  interface Window {
-    instgrm?: { Embeds: { process: () => void } };
+  // eslint-disable-next-line @typescript-eslint/no-namespace -- required shape for a custom element
+  namespace JSX {
+    interface IntrinsicElements {
+      'behold-widget': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+        'feed-id': string;
+      };
+    }
   }
 }
 
-/**
- * Real, individual posts embedded via Instagram's own oEmbed widget — no API
- * key needed, since it only ever shows posts we've explicitly picked by URL.
- * There's no live "latest posts" feed here on purpose: Instagram's Graph API
- * needs a business-account access token to pull one, which this site doesn't
- * have. Update POSTS by hand with new permalinks when there's something
- * fresh worth featuring.
- */
-const POSTS = [
-  'https://www.instagram.com/henry_designbuild/p/DbtD--PlW6p/',
-  'https://www.instagram.com/henry_designbuild/p/DawdduUsIep/',
-  'https://www.instagram.com/henry_designbuild/p/DZYx8-6lcNc/',
-];
-
 export default function InstagramFeed() {
-  // Covers client-side navigation onto a page that already has embed.js
-  // loaded from an earlier page view — the script's own onLoad only fires
-  // once per session, so new blockquotes need reprocessing here too.
-  useEffect(() => {
-    window.instgrm?.Embeds.process();
-  }, []);
-
   return (
     <div>
-      <div className="grid gap-6 sm:grid-cols-3">
-        {POSTS.map((url) => (
-          <blockquote
-            key={url}
-            className="instagram-media"
-            data-instgrm-permalink={url}
-            data-instgrm-version="14"
-            style={{ margin: '0 auto', width: '100%' }}
-          />
-        ))}
-      </div>
+      <behold-widget feed-id={FEED_ID} />
       <Script
-        src="https://www.instagram.com/embed.js"
+        id="behold-widget-loader"
         strategy="lazyOnload"
-        onLoad={() => window.instgrm?.Embeds.process()}
+        // eslint-disable-next-line react/no-danger -- exact loader snippet from Behold's dashboard
+        dangerouslySetInnerHTML={{
+          __html: `(() => {
+            if(window.__bhldScript)return;window.__bhldScript=true;
+            const d=document,s=d.createElement("script");s.type="module";
+            s.src="https://w.behold.so/widget.js";setTimeout(()=>{d.head.append(s);},0);
+          })();`,
+        }}
       />
       <p className="mt-8 text-center">
         <a
