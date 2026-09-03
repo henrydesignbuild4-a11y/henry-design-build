@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { furniture } from '@/data/furniture';
 import { journalPosts } from '@/data/journal';
+import { locationPages } from '@/data/locations';
 import { projects } from '@/data/projects';
 import { site } from '@/data/site';
 
@@ -43,5 +44,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.5,
   }));
 
-  return [...routes, ...projectRoutes, ...journalRoutes, ...furnitureRoutes];
+  // High priority — these target exact "[service] [town]" searches directly.
+  const locationRoutes = locationPages.map((l) => ({
+    url: `${site.url}/locations/${l.slug}`,
+    lastModified: new Date(),
+    changeFrequency: 'monthly' as const,
+    priority: 0.9,
+  }));
+
+  return [...routes, ...projectRoutes, ...journalRoutes, ...furnitureRoutes, ...locationRoutes];
 }

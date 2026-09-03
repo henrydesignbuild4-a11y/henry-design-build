@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { locationPages } from '@/data/locations';
 import { nav, site } from '@/data/site';
 
 export default function SiteFooter() {
@@ -71,7 +72,25 @@ export default function SiteFooter() {
               <li className="pt-3 text-bone/45">
                 {site.serviceArea}
                 {site.serviceTowns.length > 0 && (
-                  <span className="block text-bone/35">{site.serviceTowns.join(' · ')}</span>
+                  <span className="mt-1 block space-x-1 text-bone/35">
+                    {site.serviceTowns.map((town, i) => {
+                      const page = locationPages.find(
+                        (l) => l.town.split(',')[0].split(' & ')[0] === town
+                      );
+                      return (
+                        <span key={town}>
+                          {page ? (
+                            <Link href={`/locations/${page.slug}`} className="hover:text-cedar">
+                              {town}
+                            </Link>
+                          ) : (
+                            town
+                          )}
+                          {i < site.serviceTowns.length - 1 && ' · '}
+                        </span>
+                      );
+                    })}
+                  </span>
                 )}
               </li>
             </ul>
