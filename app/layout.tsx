@@ -3,6 +3,7 @@ import { Architects_Daughter } from 'next/font/google';
 import './globals.css';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
+import StructuredData from '@/components/StructuredData';
 import ChatLauncher from '@/components/chat/ChatLauncher';
 import { site } from '@/data/site';
 
@@ -49,6 +50,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${architectsDaughter.variable} ${body.variable}`}>
+      <head>
+        <StructuredData />
+      </head>
       <body>
         <a
           href="#main"
