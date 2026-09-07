@@ -325,7 +325,37 @@ export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) 
         </div>
         </div>
 
-        <div className="mt-8 space-y-3">
+        {/* A hand-drawn nudge toward the first step — the accordion below
+            reads as inert boxes until something invites the first click.
+            Purely decorative, hidden from screen readers; the real label
+            on step 01 already says what it is. */}
+        <div className="mt-7 flex items-center justify-end gap-3 pr-6 text-cedar sm:pr-10">
+          <p className="font-display -rotate-2 text-[0.95rem] italic">Start here</p>
+          <svg
+            width="34"
+            height="46"
+            viewBox="0 0 34 46"
+            fill="none"
+            className="shrink-0 rotate-[8deg]"
+            aria-hidden="true"
+          >
+            <path
+              d="M27 3C16 1 4 9 4 20C4 29 13 33 20 29"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+            />
+            <path
+              d="M11 26L20 29L18 40"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+
+        <div className="mt-3 space-y-3">
           {/* Build type */}
           <AccordionField
             id="buildType"
