@@ -9,6 +9,8 @@ import ColorPaletteBuilder from '@/components/visualizer/ColorPaletteBuilder';
 import FloorPlan from '@/components/visualizer/FloorPlan';
 import MaterialDropzone from '@/components/visualizer/MaterialDropzone';
 import PhotoCustomizer from '@/components/visualizer/PhotoCustomizer';
+import { paletteById } from '@/data/palettes';
+import { styleById } from '@/data/styles';
 import { EMPTY_BRIEF, UNKNOWN, resolveBrief, type Brief, type CustomMaterial, type CustomPaletteColors } from '@/lib/brief';
 import { buildSummary } from '@/lib/briefSummary';
 import { makeProjectId } from '@/lib/projectId';
@@ -61,6 +63,16 @@ export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) 
   const [mode, setMode] = useState<PreviewMode>('render');
   const [projectId, setProjectId] = useState<string | null>(null);
   const [skDownloaded, setSkDownloaded] = useState(false);
+
+  // Accordion state — one step open at a time so the form reads as a guided
+  // sequence instead of one long scroll. `null` closes every panel; a
+  // section id opens that one and closes the rest. Each "Continue" button
+  // just opens the next id in sequence, so a first-time visitor can move
+  // through top to bottom, while the header of any step stays clickable to
+  // jump straight to it.
+  const [openSection, setOpenSection] = useState<string | null>('buildType');
+  const toggleSection = (id: string) =>
+    setOpenSection((cur) => (cur === id ? null : id));
 
   // Optional live sync from an external brief — used on /start, where the
   // chat runs above this same component so a visitor can watch the studio
@@ -241,7 +253,14 @@ export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) 
     <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_23rem] lg:gap-12">
       {/* ── Left column: preview + controls ── */}
       <div className="min-w-0">
-        <div className="overflow-hidden border border-ink/12 bg-ink">
+        {/* Sticky on desktop so the drawing stays on screen as you work
+            through the steps below — the whole point of a live preview is
+            watching it change, which doesn't happen if it scrolls away the
+            moment you get past the first question. Mobile stays a normal
+            in-flow block; there isn't room to pin anything on a small
+            screen without the form eating the rest of the viewport. */}
+        <div className="lg:sticky lg:top-24 lg:z-10">
+        <div className="overflow-hidden border border-ink/12 bg-ink shadow-[0_8px_30px_rgba(20,17,15,0.12)]">
           <div className="flex border-b border-bone/10">
             {(
               [
@@ -286,10 +305,19 @@ export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) 
             {mode === 'plan' && isInterior && 'Use the toolbar below to drop in, drag and resize a room, window, cabinets, a fireplace, or type your own — scaled to your numbers, not a real floor plan.'}
           </p>
         </div>
+        </div>
 
-        <div className="mt-10 space-y-10">
+        <div className="mt-8 space-y-3">
           {/* Build type */}
-          <Field label="What are you building?" step={nextStep()}>
+          <AccordionField
+            id="buildType"
+            label="What are you building?"
+            step={nextStep()}
+            open={openSection === 'buildType'}
+            onToggle={() => toggleSection('buildType')}
+            summary={type.label}
+            onContinue={() => setOpenSection('size')}
+          >
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {BUILD_TYPES.map((t) => (
                 <button
@@ -316,10 +344,18 @@ export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) 
                 </button>
               ))}
             </div>
-          </Field>
+          </AccordionField>
 
           {/* Size */}
-          <Field label="How big, roughly?" step={nextStep()}>
+          <AccordionField
+            id="size"
+            label="How big, roughly?"
+            step={nextStep()}
+            open={openSection === 'size'}
+            onToggle={() => toggleSection('size')}
+            summary={`${sqft.toLocaleString()} sq ft`}
+            onContinue={() => setOpenSection('notes')}
+          >
             <div className="flex items-baseline justify-between">
               <span className="font-display text-4xl font-extrabold tracking-[-0.02em]">
                 {sqft.toLocaleString()}
@@ -345,14 +381,22 @@ export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) 
               Not sure? Pick the closest room or building you already know the size of. We refine
               this at the first meeting.
             </p>
-          </Field>
+          </AccordionField>
 
           {/* Free-text description — supplements the swatches below rather
               than replacing them. Reused as-is by lib/briefSummary.ts (the
               emailed overview) and lib/imagePrompt.ts (the AI rendering),
               so typing something here actually changes the outcome, not
               just a comment box nobody reads. */}
-          <Field label="Anything specific in mind?" step={nextStep()}>
+          <AccordionField
+            id="notes"
+            label="Anything specific in mind?"
+            step={nextStep()}
+            open={openSection === 'notes'}
+            onToggle={() => toggleSection('notes')}
+            summary={notes ? `“${notes.slice(0, 40)}${notes.length > 40 ? '…' : ''}”` : 'Optional'}
+            onContinue={() => setOpenSection('style')}
+          >
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -365,15 +409,31 @@ export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) 
               Optional. Goes straight into the AI rendering and the project summary you can send
               us — word for word.
             </p>
-          </Field>
+          </AccordionField>
 
           {/* Style */}
-          <Field label="Style" step={nextStep()}>
+          <AccordionField
+            id="style"
+            label="Style"
+            step={nextStep()}
+            open={openSection === 'style'}
+            onToggle={() => toggleSection('style')}
+            summary={styleById(style)?.name ?? 'Not picked yet'}
+            onContinue={() => setOpenSection('palette')}
+          >
             <StyleBoard buildType={buildType} selected={style} onSelect={setStyle} />
-          </Field>
+          </AccordionField>
 
           {/* Palette */}
-          <Field label="Colour palette" step={nextStep()}>
+          <AccordionField
+            id="palette"
+            label="Colour palette"
+            step={nextStep()}
+            open={openSection === 'palette'}
+            onToggle={() => toggleSection('palette')}
+            summary={customPalette ? 'Custom mix' : (paletteById(palette)?.name ?? 'Not picked yet')}
+            onContinue={() => setOpenSection('materials')}
+          >
             <ColorPaletteBuilder
               buildType={buildType}
               preset={palette}
@@ -381,10 +441,22 @@ export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) 
               custom={customPalette}
               onChangeCustom={setCustomPalette}
             />
-          </Field>
+          </AccordionField>
 
           {/* Materials */}
-          <Field label="Materials" step={nextStep()}>
+          <AccordionField
+            id="materials"
+            label="Materials"
+            step={nextStep()}
+            open={openSection === 'materials'}
+            onToggle={() => toggleSection('materials')}
+            summary={
+              materials.length + customMaterials.length > 0
+                ? `${materials.length + customMaterials.length} picked`
+                : 'Optional'
+            }
+            onContinue={() => setOpenSection('finish')}
+          >
             <div className="space-y-4">
               <MaterialBoard buildType={buildType} selected={materials} onToggle={toggleMaterial} />
               <MaterialDropzone
@@ -394,10 +466,18 @@ export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) 
                 onRename={renameCustomMaterial}
               />
             </div>
-          </Field>
+          </AccordionField>
 
           {/* Finish */}
-          <Field label="How far do you want to take the finish?" step={nextStep()}>
+          <AccordionField
+            id="finish"
+            label="How far do you want to take the finish?"
+            step={nextStep()}
+            open={openSection === 'finish'}
+            onToggle={() => toggleSection('finish')}
+            summary={FINISH_LEVELS.find((f) => f.id === finish)?.label}
+            onContinue={() => setOpenSection('site')}
+          >
             <div className="grid gap-2 sm:grid-cols-3">
               {FINISH_LEVELS.map((f) => (
                 <button
@@ -418,10 +498,20 @@ export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) 
                 </button>
               ))}
             </div>
-          </Field>
+          </AccordionField>
 
           {/* Location + season + access */}
-          <Field label="Tell us about the site" step={nextStep()}>
+          <AccordionField
+            id="site"
+            label="Tell us about the site"
+            step={nextStep()}
+            open={openSection === 'site'}
+            onToggle={() => toggleSection('site')}
+            summary={LOCATIONS.find((l) => l.id === location)?.label}
+            onContinue={() =>
+              setOpenSection(!isInterior ? 'exterior' : availableAddOns.length > 0 ? 'addons' : 'photo')
+            }
+          >
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <div>
                 <p className="eyebrow mb-3 text-ink/45">Where is this?</p>
@@ -474,11 +564,19 @@ export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) 
               The location adjusts the planning range below to reflect published regional cost
               research — it doesn&rsquo;t change the drawing.
             </p>
-          </Field>
+          </AccordionField>
 
           {/* Exterior look */}
           {!isInterior && (
-            <Field label="Pick the look" step={nextStep()}>
+            <AccordionField
+              id="exterior"
+              label="Pick the look"
+              step={nextStep()}
+              open={openSection === 'exterior'}
+              onToggle={() => toggleSection('exterior')}
+              summary={`${CLADDINGS.find((c) => c.id === cladding)?.label} · ${ROOFS.find((r) => r.id === roof)?.label}`}
+              onContinue={() => setOpenSection(availableAddOns.length > 0 ? 'addons' : 'photo')}
+            >
               <div className="space-y-7">
                 <div>
                   <p className="eyebrow mb-3 text-ink/45">Cladding</p>
@@ -609,12 +707,20 @@ export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) 
                   </div>
                 </div>
               </div>
-            </Field>
+            </AccordionField>
           )}
 
           {/* Add-ons */}
           {availableAddOns.length > 0 && (
-            <Field label="Anything else?" step={nextStep()}>
+            <AccordionField
+              id="addons"
+              label="Anything else?"
+              step={nextStep()}
+              open={openSection === 'addons'}
+              onToggle={() => toggleSection('addons')}
+              summary={activeAddOns.length > 0 ? `${activeAddOns.length} added` : 'Optional'}
+              onContinue={() => setOpenSection('photo')}
+            >
               <div className="grid gap-2 sm:grid-cols-2">
                 {availableAddOns.map((a) => {
                   const on = activeAddOns.includes(a.id);
@@ -646,19 +752,34 @@ export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) 
                   );
                 })}
               </div>
-            </Field>
+            </AccordionField>
           )}
 
           {/* Photo customizer — works for any build type, interior or exterior. */}
-          <Field label="Customize from your own photo" step={nextStep()}>
+          <AccordionField
+            id="photo"
+            label="Customize from your own photo"
+            step={nextStep()}
+            open={openSection === 'photo'}
+            onToggle={() => toggleSection('photo')}
+            summary="Optional"
+            onContinue={!isInterior ? () => setOpenSection('sketchup') : undefined}
+          >
             <PhotoCustomizer brief={brief} />
-          </Field>
+          </AccordionField>
 
           {/* SketchUp export — exterior builds only, since it draws a standalone
               massing shell (walls + roof), which doesn't make sense for a
               kitchen, bath or whole-room renovation inside an existing house. */}
           {!isInterior && (
-            <Field label="Open it in SketchUp" step={nextStep()}>
+            <AccordionField
+              id="sketchup"
+              label="Open it in SketchUp"
+              step={nextStep()}
+              open={openSection === 'sketchup'}
+              onToggle={() => toggleSection('sketchup')}
+              summary={skDownloaded ? 'Downloaded' : 'Optional'}
+            >
               <div className="border border-ink/15 bg-white/50 p-6">
                 <p className="text-sm leading-relaxed text-ink/70">
                   Download a real, to-scale 3D starting shape built from the exact numbers above —
@@ -676,7 +797,7 @@ export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) 
                   rough massing model, not a finished design.
                 </p>
               </div>
-            </Field>
+            </AccordionField>
           )}
         </div>
       </div>
@@ -778,24 +899,78 @@ export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) 
 
 /* ── Small presentational helpers ── */
 
-function Field({
+/**
+ * One step of the guided form — collapsed to a single row showing what's
+ * already picked, or expanded to show its full controls. Configurator owns
+ * which one id is open (`openSection`) so opening a step closes whatever
+ * else was open, keeping this a real accordion rather than a pile of
+ * independently-expandable boxes that could all end up open at once and
+ * bring back the original wall-of-scroll problem.
+ */
+function AccordionField({
   label,
   step,
+  open,
+  onToggle,
+  summary,
+  onContinue,
+  continueLabel = 'Continue',
   children,
 }: {
+  id: string;
   label: string;
   step: string;
+  open: boolean;
+  onToggle: () => void;
+  /** Shown, collapsed, next to the label — the current pick at a glance. */
+  summary?: string;
+  /** Omit on the last step in a chain — no "Continue" button rendered. */
+  onContinue?: () => void;
+  continueLabel?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section>
-      <div className="mb-5 flex items-baseline gap-4">
-        <span className="font-display text-[0.7rem] font-bold uppercase tracking-[0.18em] text-cedar">
-          {step}
+    <section
+      className={`border transition-colors ${open ? 'border-ink/30 bg-white/70' : 'border-ink/12 bg-white/40 hover:border-ink/25'}`}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
+      >
+        <span className="flex min-w-0 items-baseline gap-4">
+          <span className="shrink-0 font-display text-[0.7rem] font-bold uppercase tracking-[0.18em] text-cedar">
+            {step}
+          </span>
+          <span className="truncate font-display text-[0.95rem] font-bold uppercase tracking-[-0.01em] sm:text-lg">
+            {label}
+          </span>
         </span>
-        <h2 className="font-display text-lg font-bold uppercase tracking-[-0.01em]">{label}</h2>
-      </div>
-      {children}
+        <span className="flex shrink-0 items-center gap-3">
+          {!open && summary && (
+            <span className="hidden max-w-[9rem] truncate text-xs text-ink/45 sm:block">
+              {summary}
+            </span>
+          )}
+          <span
+            className={`font-display text-base text-ink/35 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+            aria-hidden="true"
+          >
+            ⌄
+          </span>
+        </span>
+      </button>
+      {open && (
+        <div className="border-t border-ink/10 px-5 pb-6 pt-5">
+          {children}
+          {onContinue && (
+            <button type="button" onClick={onContinue} className="btn-cedar mt-7">
+              {continueLabel} →
+            </button>
+          )}
+        </div>
+      )}
     </section>
   );
 }
