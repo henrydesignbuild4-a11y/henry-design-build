@@ -14,16 +14,14 @@ export default function StartPage() {
         <div className="shell pb-16 pt-24 sm:pb-20 sm:pt-32">
           <p className="eyebrow text-cedar">Start a project</p>
           <h1 className="h-hero mt-7 max-w-4xl">
-            Tell us
+            Design it
             <br />
-            <span className="text-cedar">what you&rsquo;re</span>
-            <br />
-            picturing
+            <span className="text-cedar">right here</span>
           </h1>
           <p className="lede mt-8 max-w-xl text-bone/65">
-            A short conversation — a couple of minutes, no forms. Watch the Design Studio fill in
-            below as you talk, get a project reference and a planning range, and send the whole
-            thing to our team in one click.
+            The Design Studio below is the real tool — pick what you&rsquo;re building, watch it
+            take shape, get a planning range. Not sure where to start? Tell the quick-start box one
+            line about your project first and it&rsquo;ll fill the studio in for you.
           </p>
         </div>
       </section>

@@ -42,6 +42,14 @@ type PreviewMode = 'render' | 'plan';
 
 export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) {
   const [buildType, setBuildType] = useState<BuildTypeId>('cottage');
+  // "Something else" doesn't get its own pricing/scene/AI-prompt model — it
+  // rides on 'reno' under the hood (the broadest of the six real
+  // categories) rather than threading a 7th BuildTypeId through the
+  // estimator, the chat's structured-output schema, the AI render prompt
+  // and the floor-plan geometry. Tracked separately so its card doesn't
+  // light up in sync with the real "Whole-home renovation" card (and vice
+  // versa) just because they briefly share a buildType value.
+  const [isOtherBuild, setIsOtherBuild] = useState(false);
   const [sqft, setSqft] = useState(1400);
   const [finish, setFinish] = useState<FinishLevelId>('crafted');
   const [access, setAccess] = useState<SiteAccessId>('easy');
@@ -196,10 +204,20 @@ export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) 
   function changeBuildType(id: BuildTypeId) {
     const next = BUILD_TYPES.find((t) => t.id === id)!;
     setBuildType(id);
+    setIsOtherBuild(false);
     setSqft(next.defaultSize);
     setAddOns((prev) =>
       prev.filter((a) => ADD_ONS.find((x) => x.id === a)?.appliesTo.includes(id))
     );
+  }
+
+  // "Something else" — same underlying numbers as a whole-home renovation
+  // (the broadest category), but jumps straight to the notes step since
+  // that's the only place this project actually gets described.
+  function chooseOtherBuild() {
+    changeBuildType('reno');
+    setIsOtherBuild(true);
+    setOpenSection('notes');
   }
 
   function toggleAddOn(id: string) {
@@ -315,7 +333,7 @@ export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) 
             step={nextStep()}
             open={openSection === 'buildType'}
             onToggle={() => toggleSection('buildType')}
-            summary={type.label}
+            summary={isOtherBuild ? 'Something else' : type.label}
             onContinue={() => setOpenSection('size')}
           >
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -324,9 +342,9 @@ export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) 
                   key={t.id}
                   type="button"
                   onClick={() => changeBuildType(t.id)}
-                  aria-pressed={buildType === t.id}
+                  aria-pressed={buildType === t.id && !isOtherBuild}
                   className={`border p-4 text-left transition-colors ${
-                    buildType === t.id
+                    buildType === t.id && !isOtherBuild
                       ? 'border-ink bg-ink text-bone'
                       : 'border-ink/15 bg-white/50 hover:border-ink/45'
                   }`}
@@ -336,13 +354,35 @@ export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) 
                   </span>
                   <span
                     className={`mt-1.5 block text-xs leading-snug ${
-                      buildType === t.id ? 'text-bone/60' : 'text-ink/55'
+                      buildType === t.id && !isOtherBuild ? 'text-bone/60' : 'text-ink/55'
                     }`}
                   >
                     {t.blurb}
                   </span>
                 </button>
               ))}
+              <button
+                type="button"
+                onClick={chooseOtherBuild}
+                aria-pressed={isOtherBuild}
+                className={`border border-dashed p-4 text-left transition-colors ${
+                  isOtherBuild
+                    ? 'border-ink bg-ink text-bone'
+                    : 'border-ink/25 bg-white/30 hover:border-ink/45'
+                }`}
+              >
+                <span className="block font-display text-[0.78rem] font-bold uppercase tracking-[0.08em]">
+                  Something else
+                </span>
+                <span
+                  className={`mt-1.5 block text-xs leading-snug ${
+                    isOtherBuild ? 'text-bone/60' : 'text-ink/55'
+                  }`}
+                >
+                  Boathouse, garage, addition, shed — tell us below and we&rsquo;ll price it
+                  properly.
+                </span>
+              </button>
             </div>
           </AccordionField>
 
@@ -390,11 +430,17 @@ export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) 
               just a comment box nobody reads. */}
           <AccordionField
             id="notes"
-            label="Anything specific in mind?"
+            label={isOtherBuild ? 'What are you actually building?' : 'Anything specific in mind?'}
             step={nextStep()}
             open={openSection === 'notes'}
             onToggle={() => toggleSection('notes')}
-            summary={notes ? `“${notes.slice(0, 40)}${notes.length > 40 ? '…' : ''}”` : 'Optional'}
+            summary={
+              notes
+                ? `“${notes.slice(0, 40)}${notes.length > 40 ? '…' : ''}”`
+                : isOtherBuild
+                  ? 'Tell us — this is the only description we have'
+                  : 'Optional'
+            }
             onContinue={() => setOpenSection('style')}
           >
             <textarea
@@ -402,12 +448,17 @@ export default function Configurator({ seedBrief }: { seedBrief?: Brief } = {}) 
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
               maxLength={600}
-              placeholder="A wraparound deck facing the lake, a mudroom by the side door, big windows over the sink — anything at all, in your own words."
+              placeholder={
+                isOtherBuild
+                  ? 'A boathouse on the water, a detached garage with a loft, an addition off the back of the kitchen — describe it as fully as you can, this is what we’ll use to price and design it.'
+                  : 'A wraparound deck facing the lake, a mudroom by the side door, big windows over the sink — anything at all, in your own words.'
+              }
               className="w-full border border-ink/20 bg-white/60 px-4 py-3 text-sm leading-relaxed placeholder:text-ink/35 focus:border-ink focus:outline-none"
             />
             <p className="mt-2 text-xs text-ink/50">
-              Optional. Goes straight into the AI rendering and the project summary you can send
-              us — word for word.
+              {isOtherBuild
+                ? 'Not optional here — the estimate below is placeholder renovation math until you tell us what this actually is. Goes straight into the AI rendering and the project summary you can send us, word for word.'
+                : 'Optional. Goes straight into the AI rendering and the project summary you can send us — word for word.'}
             </p>
           </AccordionField>
 
